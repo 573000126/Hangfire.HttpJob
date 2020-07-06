@@ -47,6 +47,10 @@ namespace Hangfire.HttpJob.Agent
                 var agentClass = httpContext.Request.Headers["x-job-agent-class"].ToString();
                 var agentAction = httpContext.Request.Headers["x-job-agent-action"].ToString();
                 var jobBody = httpContext.Request.Headers["x-job-body"].ToString();
+                if (!string.IsNullOrEmpty(jobBody))//是base64的
+                {
+                    jobBody = Encoding.UTF8.GetString(Convert.FromBase64String(jobBody));
+                }
                 if (string.IsNullOrEmpty(agentClass))
                 {
                     message = "err:x-job-agent-class in headers can not be empty!";
@@ -310,11 +314,11 @@ namespace Hangfire.HttpJob.Agent
                     return result;
                 }
 
-                var arr = agentHeader.Split(new string[] {"；"}, StringSplitOptions.None);
+                var arr = agentHeader.Split(new string[] { "_@_" }, StringSplitOptions.None);
                 foreach (var header in arr)
                 {
                     var value =  context.Request.Headers[header].ToString();
-                    result.TryAdd(header,value);
+                    result.TryAdd(header,Encoding.UTF8.GetString(Convert.FromBase64String(value)));
                 }
             }
             catch (Exception)

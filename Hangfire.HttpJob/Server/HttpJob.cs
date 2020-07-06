@@ -556,10 +556,25 @@ namespace Hangfire.HttpJob.Server
                 foreach (var header in item.Headers)
                 {
                     if (string.IsNullOrEmpty(header.Key)) continue;
+                    //detect-if-a-character-is-a-non-ascii-character
+                    if (System.Text.Encoding.UTF8.GetByteCount(header.Key) != header.Key.Length)
+                    {
+                        RunWithTry(() => context.WriteLine($"Request headers must contain only ASCII characters:{header.Key}"));
+                        continue;
+                    }
+
+                    //如果是agent的job
+                    if (!string.IsNullOrEmpty(item.AgentClass))
+                    {
+                        request.Headers.Add(header.Key, Convert.ToBase64String(Encoding.UTF8.GetBytes(header.Value)));
+                        continue;
+                    }
+
                     request.Headers.Add(header.Key, header.Value);
+
                 }
 
-                headerKeys = string.Join("；", item.Headers.Keys);
+                headerKeys = string.Join("_@_", item.Headers.Keys);
             }
 
             if (!string.IsNullOrEmpty(item.AgentClass))
@@ -577,7 +592,8 @@ namespace Hangfire.HttpJob.Server
                 }
 
                 var basicItem = item as BaseJobItems;
-                request.Headers.Add("x-job-body",Newtonsoft.Json.JsonConvert.SerializeObject(basicItem));
+                //detect-if-a-character-is-a-non-ascii-character
+                request.Headers.Add("x-job-body", Convert.ToBase64String(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(basicItem))));
             }
 
             if (context != null)
